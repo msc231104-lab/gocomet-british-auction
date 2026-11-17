@@ -5,12 +5,15 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.api.rfqs import router as rfq_router
 
 app = FastAPI(
     title="GoComet British Auction API",
     version="1.0.0",
     description="Backend API for the RFQ reverse auction system.",
 )
+
+app.include_router(rfq_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["Health"])
