@@ -1,4 +1,10 @@
 from fastapi import FastAPI
+from fastapi import Depends, HTTPException
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from app.db.session import get_db
 
 app = FastAPI(
     title="GoComet British Auction API",
@@ -13,3 +19,17 @@ def health_check():
         "status": "ok",
         "service": "gocomet-auction-api",
     }
+
+@app.get("/api/v1/health/db", tags=["Health"])
+def database_health_check(db: Session = Depends(get_db)):
+    try:
+        db.execute(text("SELECT 1"))
+        return {
+            "status": "ok",
+            "database": "connected",
+        }
+    except SQLAlchemyError:
+        raise HTTPException(
+            status_code=503,
+            detail="Database unavailable",
+        )
