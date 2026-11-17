@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.api.rfqs import router as rfq_router
+from app.api.suppliers import router as supplier_router
+from app.api.bids import router as bid_router
 
 app = FastAPI(
     title="GoComet British Auction API",
@@ -14,6 +16,8 @@ app = FastAPI(
 )
 
 app.include_router(rfq_router, prefix="/api/v1")
+app.include_router(supplier_router, prefix="/api/v1")
+app.include_router(bid_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["Health"])
