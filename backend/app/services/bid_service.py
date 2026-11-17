@@ -12,6 +12,10 @@ from app.models.rfq import RFQ
 from app.models.supplier import Supplier
 from app.schemas.bid import BidCreate
 
+from app.services.auction_extension_service import (
+    calculate_extended_close,
+    detect_rank_changes,
+)
 
 class BidValidationError(Exception):
     """Raised when a bid violates auction rules."""
@@ -23,6 +27,29 @@ class RFQNotFoundError(Exception):
 
 class SupplierNotFoundError(Exception):
     """Raised when the requested supplier does not exist."""
+
+
+def get_ranking_snapshot(
+    db: Session,
+    rfq_id: int,
+) -> list[tuple[int, Decimal, datetime, int]]:
+    """Return the current supplier ranking data for an RFQ."""
+
+    quotations = db.scalars(
+        select(Quotation).where(
+            Quotation.rfq_id == rfq_id
+        )
+    ).all()
+
+    return [
+        (
+            quotation.supplier_id,
+            quotation.total_amount,
+            quotation.last_bid_at,
+            quotation.id,
+        )
+        for quotation in quotations
+    ]
 
 
 def submit_bid(
@@ -74,6 +101,8 @@ def submit_bid(
             raise BidValidationError(
                 "Total amount exceeds the supported limit"
             )
+        # Capture rankings before modifying the quotation.
+        rankings_before = get_ranking_snapshot(db, rfq_id)
 
         quotation = db.scalar(
             select(Quotation).where(
@@ -136,7 +165,49 @@ def submit_bid(
             ),
         )
 
+
+
         db.add(activity)
+
+        # Flush changes before calculating the new rankings.
+        db.flush()
+
+        rankings_after = get_ranking_snapshot(db, rfq_id)
+
+        rank_changed, l1_changed = detect_rank_changes(
+            rankings_before,
+            rankings_after,
+        )
+
+        old_close_at = rfq.current_close_at
+
+        new_close_at = calculate_extended_close(
+            now=now,
+            current_close_at=old_close_at,
+            forced_close_at=rfq.forced_close_at,
+            trigger_window_minutes=rfq.trigger_window_minutes,
+            extension_minutes=rfq.extension_minutes,
+            extension_trigger=rfq.extension_trigger,
+            rank_changed=rank_changed,
+            l1_changed=l1_changed,
+        )
+
+        if new_close_at is not None:
+            rfq.current_close_at = new_close_at
+
+            extension_activity = AuctionActivityLog(
+                rfq_id=rfq_id,
+                bid_id=bid.id,
+                event_type="AUCTION_EXTENDED",
+                description=(
+                    f"Auction extended from {old_close_at.isoformat()} "
+                    f"to {new_close_at.isoformat()}"
+                ),
+                old_close_at=old_close_at,
+                new_close_at=new_close_at,
+            )
+
+            db.add(extension_activity)
 
         db.commit()
         db.refresh(bid)
