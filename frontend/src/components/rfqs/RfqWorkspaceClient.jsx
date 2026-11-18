@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore, useRef, useCallback, useEffect } from "react";
 import RfqDetailHeader from "@/components/rfqs/RfqDetailHeader";
 import RfqLeaderboard from "@/components/rfqs/RfqLeaderboard";
 import BidSubmissionForm from "@/components/rfqs/BidSubmissionForm";
@@ -54,7 +54,7 @@ function getServerClockSnapshot() {
 
 /**
  * Main interactive client component for the RFQ Details & Live Auction Workspace.
- * Manages live countdowns, reactive tabs, manual data refreshes, and bidding interactions.
+ * Manages live countdowns, reactive tabs, reliable automatic synchronization, and bidding interactions.
  */
 export default function RfqWorkspaceClient({
   initialRfq,
@@ -63,6 +63,8 @@ export default function RfqWorkspaceClient({
   initialActivity = [],
   initialSuppliers = [],
 }) {
+  const rfqId = initialRfq?.id;
+
   const [rfq, setRfq] = useState(initialRfq);
   const [rankings, setRankings] = useState(initialRankings);
   const [bids, setBids] = useState(initialBids);
@@ -70,8 +72,17 @@ export default function RfqWorkspaceClient({
   const [suppliers] = useState(initialSuppliers);
 
   const [activeTab, setActiveTab] = useState("workspace"); // workspace | bids | activity | specs
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+  const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false);
+  const [isStale, setIsStale] = useState(false);
+  const [syncError, setSyncError] = useState(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
+
+  // Synchronization and request concurrency control refs
+  const inFlightRef = useRef(false);
+  const abortControllerRef = useRef(null);
+  const requestIdRef = useRef(0);
+  const isUnmountedRef = useRef(false);
 
   // Synchronize 1s clock tick without synchronous effect setState
   const clockTime = useSyncExternalStore(
@@ -98,50 +109,212 @@ export default function RfqWorkspaceClient({
     ? formatCountdown(targetTimestamp, now)
     : null;
 
-  // Unified refresh handler
-  const handleRefresh = async () => {
-    if (!rfq?.id) return;
-    setIsRefreshing(true);
+  // Unified synchronization handler with race-condition prevention
+  const performSync = useCallback(
+    async ({ isManual = false, force = false } = {}) => {
+      if (isUnmountedRef.current || !rfqId) return;
 
-    try {
-      const [rfqRes, rankRes, bidsRes, actRes] = await Promise.all([
-        fetch(`/api/rfqs/${rfq.id}`, { cache: "no-store" }),
-        fetch(`/api/rfqs/${rfq.id}/rankings`, { cache: "no-store" }),
-        fetch(`/api/rfqs/${rfq.id}/bids`, { cache: "no-store" }),
-        fetch(`/api/rfqs/${rfq.id}/activity`, { cache: "no-store" }),
-      ]);
-
-      const [rfqData, rankData, bidsData, actData] = await Promise.all([
-        rfqRes.json().catch(() => null),
-        rankRes.json().catch(() => null),
-        bidsRes.json().catch(() => null),
-        actRes.json().catch(() => null),
-      ]);
-
-      if (rfqData?.data) {
-        setRfq(rfqData.data);
-      }
-      if (Array.isArray(rankData?.data)) {
-        setRankings(rankData.data);
-      }
-      if (Array.isArray(bidsData?.data)) {
-        setBids(bidsData.data);
-      }
-      if (Array.isArray(actData?.data)) {
-        setActivities(actData.data);
+      // Concurrency management:
+      if (inFlightRef.current) {
+        if (force) {
+          // Explicit or high-priority requests (manual refresh / post-bid) abort active in-flight poll
+          if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+          }
+        } else {
+          // Skip regular background poll if another request is already in-flight
+          return;
+        }
       }
 
-      setLastRefreshedAt(new Date());
-    } catch {
-      // Keep existing data on transient fetch error
-    } finally {
-      setIsRefreshing(false);
-    }
+      inFlightRef.current = true;
+      const currentRequestId = ++requestIdRef.current;
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      if (!isUnmountedRef.current) {
+        if (isManual) {
+          setIsManualRefreshing(true);
+        } else {
+          setIsBackgroundSyncing(true);
+        }
+      }
+
+      try {
+        const [rfqRes, rankRes, bidsRes, actRes] = await Promise.all([
+          fetch(`/api/rfqs/${rfqId}`, {
+            signal: controller.signal,
+            cache: "no-store",
+          }),
+          fetch(`/api/rfqs/${rfqId}/rankings`, {
+            signal: controller.signal,
+            cache: "no-store",
+          }),
+          fetch(`/api/rfqs/${rfqId}/bids`, {
+            signal: controller.signal,
+            cache: "no-store",
+          }),
+          fetch(`/api/rfqs/${rfqId}/activity`, {
+            signal: controller.signal,
+            cache: "no-store",
+          }),
+        ]);
+
+        // Guard against out-of-order responses or component unmount
+        if (
+          currentRequestId !== requestIdRef.current ||
+          isUnmountedRef.current
+        ) {
+          return;
+        }
+
+        // Validate HTTP response statuses
+        if (!rfqRes.ok || !rankRes.ok || !bidsRes.ok || !actRes.ok) {
+          const failedDetails = [
+            !rfqRes.ok && `RFQ details (${rfqRes.status})`,
+            !rankRes.ok && `Rankings (${rankRes.status})`,
+            !bidsRes.ok && `Bids (${bidsRes.status})`,
+            !actRes.ok && `Activity (${actRes.status})`,
+          ]
+            .filter(Boolean)
+            .join(", ");
+
+          throw new Error(`Failed to load: ${failedDetails}`);
+        }
+
+        const [rfqData, rankData, bidsData, actData] = await Promise.all([
+          rfqRes.json().catch(() => null),
+          rankRes.json().catch(() => null),
+          bidsRes.json().catch(() => null),
+          actRes.json().catch(() => null),
+        ]);
+
+        if (
+          currentRequestId !== requestIdRef.current ||
+          isUnmountedRef.current
+        ) {
+          return;
+        }
+
+        // Validate response envelopes and data integrity
+        const isRfqValid =
+          rfqData?.data &&
+          typeof rfqData.data === "object" &&
+          rfqData.data.id === rfqId;
+        const isRankValid = Array.isArray(rankData?.data);
+        const isBidsValid = Array.isArray(bidsData?.data);
+        const isActValid = Array.isArray(actData?.data);
+
+        if (!isRfqValid || !isRankValid || !isBidsValid || !isActValid) {
+          throw new Error("Received invalid or malformed data payload from backend");
+        }
+
+        // All 4 responses verified successfully: update state atomically if still mounted
+        if (!isUnmountedRef.current && currentRequestId === requestIdRef.current) {
+          setRfq(rfqData.data);
+          setRankings(rankData.data);
+          setBids(bidsData.data);
+          setActivities(actData.data);
+          setLastRefreshedAt(new Date());
+          setIsStale(false);
+          setSyncError(null);
+        }
+      } catch (err) {
+        if (err.name === "AbortError") {
+          // Intentional cancellation; do not treat as an error
+          return;
+        }
+
+        if (
+          currentRequestId === requestIdRef.current &&
+          !isUnmountedRef.current
+        ) {
+          // Preserve last successfully loaded data; surface accessible warning
+          setIsStale(true);
+          setSyncError(
+            err.message || "Failed to synchronize auction data with backend"
+          );
+        }
+      } finally {
+        // Only the currently active request resets inFlightRef and state
+        if (currentRequestId === requestIdRef.current) {
+          inFlightRef.current = false;
+          abortControllerRef.current = null;
+          if (!isUnmountedRef.current) {
+            setIsManualRefreshing(false);
+            setIsBackgroundSyncing(false);
+          }
+        }
+      }
+    },
+    [rfqId]
+  );
+
+  // Automatic 5-second polling and visibility change synchronization
+  useEffect(() => {
+    let active = true;
+    isUnmountedRef.current = false;
+    const reqRef = requestIdRef;
+    const inflight = inFlightRef;
+    const abortRef = abortControllerRef;
+
+    let pollTimeoutId = null;
+
+    const scheduleNextPoll = () => {
+      if (!active) return;
+      if (pollTimeoutId) clearTimeout(pollTimeoutId);
+      pollTimeoutId = setTimeout(async () => {
+        if (!active) return;
+        if (
+          !isUnmountedRef.current &&
+          typeof document !== "undefined" &&
+          document.visibilityState === "visible"
+        ) {
+          await performSync({ isManual: false, force: false });
+        }
+        if (active && !isUnmountedRef.current) {
+          scheduleNextPoll();
+        }
+      }, 5000);
+    };
+
+    const handleVisibilityChange = () => {
+      if (!active) return;
+      if (document.visibilityState === "visible" && !isUnmountedRef.current) {
+        // Immediate sync upon returning to tab
+        performSync({ isManual: false, force: true });
+        scheduleNextPoll();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    scheduleNextPoll();
+
+    return () => {
+      active = false;
+      isUnmountedRef.current = true;
+      if (pollTimeoutId) clearTimeout(pollTimeoutId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+
+      // Invalidate outstanding request IDs and abort active controller
+      reqRef.current += 1;
+      inflight.current = false;
+      if (abortRef.current) {
+        abortRef.current.abort();
+        abortRef.current = null;
+      }
+    };
+  }, [rfqId, performSync]);
+
+  // Handle manual refresh button click
+  const handleManualRefresh = () => {
+    performSync({ isManual: true, force: true });
   };
 
-  // Handle successful bid submission: refresh state immediately
+  // Handle successful bid submission: immediate forced synchronization
   const handleBidSubmitted = async () => {
-    await handleRefresh();
+    await performSync({ isManual: false, force: true });
   };
 
   const statusStyle = getStatusStyle(rfq?.status);
@@ -153,8 +326,11 @@ export default function RfqWorkspaceClient({
         rfq={rfq}
         auctionState={auctionState}
         countdown={countdown}
-        isRefreshing={isRefreshing}
-        onRefresh={handleRefresh}
+        isRefreshing={isManualRefreshing}
+        isBackgroundSyncing={isBackgroundSyncing}
+        isStale={isStale}
+        syncError={syncError}
+        onRefresh={handleManualRefresh}
         lastRefreshedAt={lastRefreshedAt}
       />
 

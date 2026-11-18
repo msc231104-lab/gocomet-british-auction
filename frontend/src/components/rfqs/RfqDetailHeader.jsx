@@ -22,7 +22,10 @@ export default function RfqDetailHeader({
   rfq,
   auctionState,
   countdown,
-  isRefreshing,
+  isRefreshing = false,
+  isBackgroundSyncing = false,
+  isStale = false,
+  syncError = null,
   onRefresh,
   lastRefreshedAt,
 }) {
@@ -41,17 +44,49 @@ export default function RfqDetailHeader({
         </Link>
 
         <div className="flex items-center gap-3">
+          {/* Live Sync Status Indicator */}
+          <div
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+              isStale
+                ? "bg-amber-50 border-amber-200 text-amber-800"
+                : "bg-slate-50 border-slate-200 text-slate-600"
+            }`}
+            title={
+              isStale
+                ? "Automatic synchronization interrupted. Displaying cached data."
+                : "Live auction automatic background sync active (5s interval)"
+            }
+          >
+            {isStale ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                <span>Sync Stale</span>
+              </>
+            ) : isBackgroundSyncing ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                <span className="text-emerald-700 font-semibold">Syncing</span>
+              </>
+            ) : (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>Live (5s)</span>
+              </>
+            )}
+          </div>
+
           {lastRefreshedAt && (
             <span className="text-xs text-slate-400 hidden sm:inline-block">
-              Updated {lastRefreshedAt.toLocaleTimeString()}
+              Synced {lastRefreshedAt.toLocaleTimeString()}
             </span>
           )}
+
           <button
             type="button"
             onClick={onRefresh}
             disabled={isRefreshing}
             className="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 transition-colors shadow-xs"
-            title="Refresh auction rankings and bids"
+            title="Manually refresh auction rankings and bids"
           >
             <RefreshIcon
               className={`w-3.5 h-3.5 text-slate-500 ${isRefreshing ? "animate-spin text-slate-700" : ""}`}
@@ -60,6 +95,35 @@ export default function RfqDetailHeader({
           </button>
         </div>
       </div>
+
+      {/* Stale Data Warning Banner */}
+      {isStale && syncError && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mt-4 p-3.5 bg-amber-50/90 border border-amber-200/90 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-amber-900"
+        >
+          <div className="flex items-start sm:items-center gap-2.5">
+            <InfoIcon className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5 sm:mt-0" />
+            <div>
+              <span className="font-semibold">Synchronization Interrupted:</span>{" "}
+              {syncError}. Showing cached auction data from{" "}
+              <span className="font-mono font-medium">
+                {lastRefreshedAt ? lastRefreshedAt.toLocaleTimeString() : "initial load"}
+              </span>
+              . Retrying automatically...
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="font-semibold text-amber-900 underline hover:text-amber-950 whitespace-nowrap self-end sm:self-auto text-xs"
+          >
+            {isRefreshing ? "Retrying..." : "Retry Now"}
+          </button>
+        </div>
+      )}
 
       {/* Main Title & Badges */}
       <div className="pt-5 pb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
