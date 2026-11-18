@@ -144,6 +144,7 @@ export default async function DashboardPage() {
                   <th scope="col" className="py-3 px-4">Extension Rule</th>
                   <th scope="col" className="py-3 px-4">Current Close (UTC)</th>
                   <th scope="col" className="py-3 px-5">Created (UTC)</th>
+                  <th scope="col" className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -154,11 +155,21 @@ export default async function DashboardPage() {
                       key={rfq.id}
                       className="hover:bg-slate-50/70 transition-colors"
                     >
-                      <td className="py-3.5 px-5 font-mono font-medium text-slate-900">
-                        {rfq.reference_id}
+                      <td className="py-3.5 px-5 font-mono font-medium">
+                        <Link
+                          href={`/rfqs/${rfq.id}`}
+                          className="font-mono font-semibold text-blue-700 hover:text-blue-900 hover:underline"
+                        >
+                          {rfq.reference_id}
+                        </Link>
                       </td>
                       <td className="py-3.5 px-5 font-medium text-slate-800">
-                        {rfq.name}
+                        <Link
+                          href={`/rfqs/${rfq.id}`}
+                          className="hover:text-blue-700 hover:underline"
+                        >
+                          {rfq.name}
+                        </Link>
                       </td>
                       <td className="py-3.5 px-4">
                         <span
@@ -182,6 +193,15 @@ export default async function DashboardPage() {
                       <td className="py-3.5 px-5 text-slate-500 text-[11px]">
                         {formatShortDateUTC(rfq.created_at)}
                       </td>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <Link
+                          href={`/rfqs/${rfq.id}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 rounded-md transition-colors"
+                        >
+                          <span>Workspace</span>
+                          <span>&rarr;</span>
+                        </Link>
+                      </td>
                     </tr>
                   );
                 })}
@@ -196,9 +216,12 @@ export default async function DashboardPage() {
               return (
                 <div key={rfq.id} className="p-4 space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs font-semibold text-slate-900">
+                    <Link
+                      href={`/rfqs/${rfq.id}`}
+                      className="font-mono text-xs font-semibold text-blue-700 hover:underline"
+                    >
                       {rfq.reference_id}
-                    </span>
+                    </Link>
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium border ${statusStyle.badge}`}
                     >
@@ -210,9 +233,12 @@ export default async function DashboardPage() {
                     </span>
                   </div>
 
-                  <p className="text-xs font-medium text-slate-800">
+                  <Link
+                    href={`/rfqs/${rfq.id}`}
+                    className="text-xs font-medium text-slate-800 hover:text-blue-700 block"
+                  >
                     {rfq.name}
-                  </p>
+                  </Link>
 
                   <div className="text-[11px] text-slate-500 space-y-0.5 pt-1">
                     <div className="flex justify-between">
@@ -227,6 +253,16 @@ export default async function DashboardPage() {
                         {formatExtensionTrigger(rfq.extension_trigger)}
                       </span>
                     </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <Link
+                      href={`/rfqs/${rfq.id}`}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-900"
+                    >
+                      <span>Open Workspace</span>
+                      <span>&rarr;</span>
+                    </Link>
                   </div>
                 </div>
               );

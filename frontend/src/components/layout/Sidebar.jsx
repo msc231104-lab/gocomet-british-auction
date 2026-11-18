@@ -154,7 +154,7 @@ export default function Sidebar({ onClose, isMobile = false }) {
             </span>
           </div>
           <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
-            Descending dynamic bidding with live clock auto-extension and minimum price decrement enforcement.
+            Competitive reverse bidding with live clock auto-extension and lower-quote enforcement.
           </p>
         </div>
       </div>

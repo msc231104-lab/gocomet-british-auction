@@ -290,6 +290,7 @@ export default function RfqListClient({ initialRfqs = [], initialError = null })
                   <th scope="col" className="py-3 px-3">Forced Close (UTC)</th>
                   <th scope="col" className="py-3 px-3">Extension Trigger</th>
                   <th scope="col" className="py-3 px-4">Created (UTC)</th>
+                  <th scope="col" className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -300,11 +301,21 @@ export default function RfqListClient({ initialRfqs = [], initialError = null })
                       key={rfq.id}
                       className="hover:bg-slate-50/70 transition-colors"
                     >
-                      <td className="py-3.5 px-4 font-mono font-medium text-slate-900 whitespace-nowrap">
-                        {rfq.reference_id}
+                      <td className="py-3.5 px-4 font-mono font-medium whitespace-nowrap">
+                        <Link
+                          href={`/rfqs/${rfq.id}`}
+                          className="font-mono font-semibold text-blue-700 hover:text-blue-900 hover:underline"
+                        >
+                          {rfq.reference_id}
+                        </Link>
                       </td>
                       <td className="py-3.5 px-4 font-medium text-slate-800 max-w-xs truncate" title={rfq.name}>
-                        {rfq.name}
+                        <Link
+                          href={`/rfqs/${rfq.id}`}
+                          className="hover:text-blue-700 hover:underline"
+                        >
+                          {rfq.name}
+                        </Link>
                       </td>
                       <td className="py-3.5 px-3 whitespace-nowrap">
                         <span
@@ -334,6 +345,15 @@ export default function RfqListClient({ initialRfqs = [], initialError = null })
                       <td className="py-3.5 px-4 text-slate-500 text-[11px] whitespace-nowrap">
                         {formatShortDateUTC(rfq.created_at)}
                       </td>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <Link
+                          href={`/rfqs/${rfq.id}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 rounded-md transition-colors"
+                        >
+                          <span>Workspace</span>
+                          <span>&rarr;</span>
+                        </Link>
+                      </td>
                     </tr>
                   );
                 })}
@@ -349,12 +369,18 @@ export default function RfqListClient({ initialRfqs = [], initialError = null })
                 <div key={rfq.id} className="p-4 sm:p-5 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className="font-mono text-xs font-bold text-slate-900 block">
+                      <Link
+                        href={`/rfqs/${rfq.id}`}
+                        className="font-mono text-xs font-bold text-blue-700 hover:underline block"
+                      >
                         {rfq.reference_id}
-                      </span>
-                      <h3 className="text-sm font-semibold text-slate-800 mt-0.5">
+                      </Link>
+                      <Link
+                        href={`/rfqs/${rfq.id}`}
+                        className="text-sm font-semibold text-slate-800 hover:text-blue-700 block mt-0.5"
+                      >
                         {rfq.name}
-                      </h3>
+                      </Link>
                     </div>
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium border shrink-0 ${statusStyle.badge}`}
@@ -409,6 +435,13 @@ export default function RfqListClient({ initialRfqs = [], initialError = null })
                     <span>Created: {formatDateTimeUTC(rfq.created_at)}</span>
                     <span className="text-slate-500">ID #{rfq.id}</span>
                   </div>
+
+                  <Link
+                    href={`/rfqs/${rfq.id}`}
+                    className="block w-full text-center py-2 px-3 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors"
+                  >
+                    Enter Live Workspace &rarr;
+                  </Link>
                 </div>
               );
             })}
