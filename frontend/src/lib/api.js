@@ -98,3 +98,117 @@ export async function getRFQs() {
     };
   }
 }
+
+/**
+ * Create a new RFQ by sending a POST request to the backend.
+ *
+ * @param {object} payload
+ * @returns {Promise<{ data: object | null, error: { message: string, code?: string, status?: number, details?: any } | null, status: number }>}
+ */
+export async function createRFQ(payload) {
+  const baseUrl = getBackendBaseUrl();
+  const endpoint = `${baseUrl}/api/v1/rfqs`;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    let resJson = null;
+    try {
+      resJson = await res.json();
+    } catch {
+      // Body not JSON
+    }
+
+    if (res.status === 201) {
+      return {
+        data: resJson,
+        error: null,
+        status: 201,
+      };
+    }
+
+    // 409 Conflict: Duplicate reference ID
+    if (res.status === 409) {
+      const msg =
+        typeof resJson?.detail === "string"
+          ? resJson.detail
+          : "An RFQ with this reference ID already exists.";
+      return {
+        data: null,
+        error: {
+          message: msg,
+          code: "DUPLICATE_REFERENCE",
+          status: 409,
+        },
+        status: 409,
+      };
+    }
+
+    // 422 Unprocessable Entity: Validation errors
+    if (res.status === 422) {
+      let msg = "Validation failed on the backend.";
+      if (Array.isArray(resJson?.detail) && resJson.detail.length > 0) {
+        msg = resJson.detail
+          .map((d) => {
+            const fieldName = Array.isArray(d.loc) ? d.loc.slice(-1)[0] : "Field";
+            return `${fieldName}: ${d.msg}`;
+          })
+          .join("; ");
+      } else if (typeof resJson?.detail === "string") {
+        msg = resJson.detail;
+      }
+
+      return {
+        data: null,
+        error: {
+          message: msg,
+          code: "VALIDATION_ERROR",
+          status: 422,
+          details: resJson?.detail,
+        },
+        status: 422,
+      };
+    }
+
+    // Other non-2xx responses
+    return {
+      data: null,
+      error: {
+        message:
+          typeof resJson?.detail === "string"
+            ? resJson.detail
+            : `Backend returned HTTP ${res.status} (${res.statusText || "Error"})`,
+        code: "NON_2XX",
+        status: res.status,
+      },
+      status: res.status,
+    };
+  } catch (err) {
+    const isAbort = err.name === "AbortError";
+    return {
+      data: null,
+      error: {
+        message: isAbort
+          ? `Connection to backend timed out after 10 seconds (${baseUrl}).`
+          : `Cannot reach backend at ${baseUrl}. Please ensure the FastAPI server is running.`,
+        code: isAbort ? "TIMEOUT" : "NETWORK_ERROR",
+        status: 503,
+      },
+      status: 503,
+    };
+  }
+}

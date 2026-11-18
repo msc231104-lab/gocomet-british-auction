@@ -1,6 +1,7 @@
 /**
  * Date and data formatting utilities for GoComet British Auction.
- * Formats timestamps in UTC for deterministic rendering across server and client.
+ * Formats timestamps in UTC for deterministic rendering across server and client,
+ * and provides timezone conversion utilities for RFQ creation.
  */
 
 const MONTHS = [
@@ -111,4 +112,65 @@ export function getStatusStyle(status) {
         label: status || "Unknown",
       };
   }
+}
+
+/**
+ * Detect user's local timezone name and offset string
+ *
+ * @returns {{ name: string, offset: string, formatted: string }}
+ */
+export function getUserTimezone() {
+  try {
+    const tzName =
+      (typeof Intl !== "undefined" && Intl.DateTimeFormat().resolvedOptions().timeZone) ||
+      "UTC";
+    const d = new Date();
+    const offsetMinutes = -d.getTimezoneOffset();
+    const sign = offsetMinutes >= 0 ? "+" : "-";
+    const absOffset = Math.abs(offsetMinutes);
+    const offsetH = String(Math.floor(absOffset / 60)).padStart(2, "0");
+    const offsetM = String(absOffset % 60).padStart(2, "0");
+    const offsetStr = `${sign}${offsetH}:${offsetM}`;
+
+    return {
+      name: tzName,
+      offset: offsetStr,
+      formatted: `${tzName} (UTC${offsetStr})`,
+    };
+  } catch {
+    return {
+      name: "UTC",
+      offset: "+00:00",
+      formatted: "UTC (+00:00)",
+    };
+  }
+}
+
+/**
+ * Convert a local datetime-local input string (e.g. "2026-11-20T09:00")
+ * to a valid, timezone-aware ISO 8601 string (e.g. "2026-11-20T09:00:00+05:30").
+ * Preserves the user's local timezone offset for backend validation.
+ *
+ * @param {string | null | undefined} localDateTimeString
+ * @returns {string | null}
+ */
+export function toTimezoneAwareISO(localDateTimeString) {
+  if (!localDateTimeString) return null;
+  const d = new Date(localDateTimeString);
+  if (isNaN(d.getTime())) return null;
+
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const seconds = String(d.getSeconds()).padStart(2, "0");
+
+  const offsetMinutes = -d.getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? "+" : "-";
+  const absOffset = Math.abs(offsetMinutes);
+  const offsetH = String(Math.floor(absOffset / 60)).padStart(2, "0");
+  const offsetM = String(absOffset % 60).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${sign}${offsetH}:${offsetM}`;
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRFQs } from "@/lib/api";
+import { getRFQs, createRFQ } from "@/lib/api";
 
 export async function GET() {
   const result = await getRFQs();
@@ -20,4 +20,47 @@ export async function GET() {
     data: result.data,
     error: null,
   });
+}
+
+export async function POST(request) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      {
+        data: null,
+        error: {
+          message: "Invalid JSON request payload.",
+          code: "INVALID_JSON",
+          status: 400,
+        },
+      },
+      { status: 400 }
+    );
+  }
+
+  const result = await createRFQ(body);
+
+  if (result.error) {
+    return NextResponse.json(
+      {
+        data: null,
+        error: result.error,
+      },
+      {
+        status: result.status || result.error.status || 502,
+      }
+    );
+  }
+
+  return NextResponse.json(
+    {
+      data: result.data,
+      error: null,
+    },
+    {
+      status: 201,
+    }
+  );
 }
