@@ -5,6 +5,10 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.rfq import RFQ
 from app.schemas.rfq import RFQCreate, RFQResponse
+from app.schemas.auction_activity import AuctionActivityResponse
+from app.services.auction_activity_service import get_rfq_activity
+from app.schemas.ranking import RankingResponse
+from app.services.ranking_service import get_rfq_rankings
 from app.services.rfq_service import (
     DuplicateRFQReferenceError,
     create_rfq,
@@ -81,3 +85,44 @@ def get_rfq_endpoint(
         )
 
     return build_rfq_response(rfq)
+
+
+@router.get(
+    "/{rfq_id}/rankings",
+    response_model=list[RankingResponse],
+)
+def get_rfq_rankings_endpoint(
+    rfq_id: int,
+    db: Session = Depends(get_db),
+):
+    """Return current supplier rankings for an RFQ."""
+
+    rfq = get_rfq_by_id(db, rfq_id)
+
+    if rfq is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="RFQ not found",
+        )
+
+    return get_rfq_rankings(db, rfq_id)
+
+
+
+@router.get(
+    "/{rfq_id}/activity",
+    response_model=list[AuctionActivityResponse],
+)
+def get_rfq_activity_endpoint(
+    rfq_id: int,
+    db: Session = Depends(get_db),
+):
+    """Return the chronological activity timeline for an RFQ."""
+
+    if get_rfq_by_id(db, rfq_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="RFQ not found",
+        )
+
+    return get_rfq_activity(db, rfq_id)

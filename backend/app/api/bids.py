@@ -4,6 +4,9 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.schemas.bid import BidCreate, BidResponse
+from app.schemas.bid_history import BidHistoryResponse
+from app.services.bid_history_service import get_rfq_bid_history
+from app.services.rfq_service import get_rfq_by_id
 from app.services.bid_service import (
     BidValidationError,
     RFQNotFoundError,
@@ -49,3 +52,23 @@ def submit_bid_endpoint(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         ) from exc
+
+
+
+@router.get(
+    "/{rfq_id}/bids",
+    response_model=list[BidHistoryResponse],
+)
+def get_rfq_bid_history_endpoint(
+    rfq_id: int,
+    db: Session = Depends(get_db),
+):
+    """Return the complete bid history for an RFQ."""
+
+    if get_rfq_by_id(db, rfq_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="RFQ not found",
+        )
+
+    return get_rfq_bid_history(db, rfq_id)
