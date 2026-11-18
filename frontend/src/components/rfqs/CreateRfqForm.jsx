@@ -88,7 +88,6 @@ export default function CreateRfqForm() {
   // Handle Input Changes
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear field-level error when user modifies the input
     if (fieldErrors[field]) {
       setFieldErrors((prev) => {
         const next = { ...prev };
@@ -101,140 +100,129 @@ export default function CreateRfqForm() {
     }
   };
 
-  // Client-Side Validation
+  // Comprehensive Client-side Form Validation
   const validateForm = () => {
     const errors = {};
-    const trimmedRef = formData.reference_id.trim();
-    const trimmedName = formData.name.trim();
 
-    // Section A: RFQ Identification
-    if (!trimmedRef) {
-      errors.reference_id = "Reference ID is required.";
-    } else if (trimmedRef.length > 100) {
-      errors.reference_id = "Reference ID cannot exceed 100 characters.";
+    // Reference ID
+    const ref = formData.reference_id.trim();
+    if (!ref) {
+      errors.reference_id = "Reference ID is required";
+    } else if (ref.length > 100) {
+      errors.reference_id = "Reference ID cannot exceed 100 characters";
     }
 
-    if (!trimmedName) {
-      errors.name = "RFQ Name is required.";
-    } else if (trimmedName.length > 255) {
-      errors.name = "RFQ Name cannot exceed 255 characters.";
+    // RFQ Name
+    const name = formData.name.trim();
+    if (!name) {
+      errors.name = "RFQ name is required";
+    } else if (name.length > 255) {
+      errors.name = "RFQ name cannot exceed 255 characters";
     }
 
-    // Section B: Auction Schedule
+    // Datetimes Presence
     if (!formData.bid_start_at) {
-      errors.bid_start_at = "Bid start date and time is required.";
+      errors.bid_start_at = "Bid start date/time is required";
     }
     if (!formData.initial_close_at) {
-      errors.initial_close_at = "Initial close date and time is required.";
+      errors.initial_close_at = "Initial close date/time is required";
     }
     if (!formData.forced_close_at) {
-      errors.forced_close_at = "Forced close deadline is required.";
+      errors.forced_close_at = "Forced close date/time is required";
     }
     if (!formData.pickup_at) {
-      errors.pickup_at = "Pickup date and time is required.";
+      errors.pickup_at = "Pickup date/time is required";
     }
 
-    const start = formData.bid_start_at ? new Date(formData.bid_start_at) : null;
-    const initialClose = formData.initial_close_at ? new Date(formData.initial_close_at) : null;
-    const forcedClose = formData.forced_close_at ? new Date(formData.forced_close_at) : null;
-    const pickup = formData.pickup_at ? new Date(formData.pickup_at) : null;
+    // Chronological Date Rules Validation
+    if (
+      formData.bid_start_at &&
+      formData.initial_close_at &&
+      formData.forced_close_at
+    ) {
+      const start = new Date(formData.bid_start_at).getTime();
+      const initialClose = new Date(formData.initial_close_at).getTime();
+      const forcedClose = new Date(formData.forced_close_at).getTime();
 
-    if (start && isNaN(start.getTime())) {
-      errors.bid_start_at = "Invalid bid start date.";
-    }
-    if (initialClose && isNaN(initialClose.getTime())) {
-      errors.initial_close_at = "Invalid initial close date.";
-    }
-    if (forcedClose && isNaN(forcedClose.getTime())) {
-      errors.forced_close_at = "Invalid forced close date.";
-    }
-    if (pickup && isNaN(pickup.getTime())) {
-      errors.pickup_at = "Invalid pickup date.";
-    }
-
-    // Backend Ordering Constraints:
-    // bid_start_at < initial_close_at < forced_close_at
-    if (start && initialClose && !isNaN(start.getTime()) && !isNaN(initialClose.getTime())) {
       if (initialClose <= start) {
-        errors.initial_close_at = "Initial close must be after bid start time.";
+        errors.initial_close_at =
+          "Initial close must be strictly after bid start time";
       }
-    }
 
-    if (initialClose && forcedClose && !isNaN(initialClose.getTime()) && !isNaN(forcedClose.getTime())) {
       if (forcedClose <= initialClose) {
-        errors.forced_close_at = "Forced close must be after initial close time.";
+        errors.forced_close_at =
+          "Forced close deadline must be strictly after initial close time";
       }
     }
 
-    // pickup_at > bid_start_at
-    if (start && pickup && !isNaN(start.getTime()) && !isNaN(pickup.getTime())) {
+    if (formData.pickup_at && formData.bid_start_at) {
+      const start = new Date(formData.bid_start_at).getTime();
+      const pickup = new Date(formData.pickup_at).getTime();
+
       if (pickup <= start) {
-        errors.pickup_at = "Pickup time must be after bid start time.";
+        errors.pickup_at = "Cargo pickup must be strictly after bid start time";
       }
     }
 
-    // Section C: Auction Extension Rules
-    const triggerWindow = Number(formData.trigger_window_minutes);
-    if (
-      !formData.trigger_window_minutes ||
-      isNaN(triggerWindow) ||
-      !Number.isInteger(triggerWindow) ||
-      triggerWindow <= 0
-    ) {
-      errors.trigger_window_minutes = "Trigger window must be a positive integer (> 0).";
+    // Numeric Window Validations
+    const triggerWindow = parseInt(formData.trigger_window_minutes, 10);
+    if (isNaN(triggerWindow) || triggerWindow <= 0) {
+      errors.trigger_window_minutes =
+        "Trigger window must be a positive integer greater than 0";
     }
 
-    const extensionMins = Number(formData.extension_minutes);
-    if (
-      !formData.extension_minutes ||
-      isNaN(extensionMins) ||
-      !Number.isInteger(extensionMins) ||
-      extensionMins <= 0
-    ) {
-      errors.extension_minutes = "Extension duration must be a positive integer (> 0).";
+    const extensionMins = parseInt(formData.extension_minutes, 10);
+    if (isNaN(extensionMins) || extensionMins <= 0) {
+      errors.extension_minutes =
+        "Extension duration must be a positive integer greater than 0";
     }
 
+    // Extension Trigger Enum
     const validTriggers = ["ANY_BID", "ANY_RANK_CHANGE", "L1_CHANGE"];
     if (!validTriggers.includes(formData.extension_trigger)) {
-      errors.extension_trigger = "Select a valid extension trigger rule.";
+      errors.extension_trigger = "Please select a supported extension trigger";
     }
 
     return errors;
   };
 
-  // Form Submit Handler
+  // Form Submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isSubmitting) return;
-
     setFormError(null);
     setSuccessMessage(null);
 
     const errors = validateForm();
-    setFieldErrors(errors);
-
     if (Object.keys(errors).length > 0) {
-      // Find first error and scroll to it
-      const firstField = Object.keys(errors)[0];
-      const el = document.getElementById(firstField);
-      if (el) {
-        el.focus();
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      setFieldErrors(errors);
+      setFormError("Please resolve the highlighted validation errors before submitting.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      // Prepare ISO 8601 payload with explicit timezone offset
+      // Build Timezone-Aware Payload
       const payload = {
         reference_id: formData.reference_id.trim(),
         name: formData.name.trim(),
-        bid_start_at: toTimezoneAwareISO(formData.bid_start_at),
-        initial_close_at: toTimezoneAwareISO(formData.initial_close_at),
-        forced_close_at: toTimezoneAwareISO(formData.forced_close_at),
-        pickup_at: toTimezoneAwareISO(formData.pickup_at),
+        bid_start_at: toTimezoneAwareISO(
+          formData.bid_start_at,
+          timezoneInfo.offset
+        ),
+        initial_close_at: toTimezoneAwareISO(
+          formData.initial_close_at,
+          timezoneInfo.offset
+        ),
+        forced_close_at: toTimezoneAwareISO(
+          formData.forced_close_at,
+          timezoneInfo.offset
+        ),
+        pickup_at: toTimezoneAwareISO(
+          formData.pickup_at,
+          timezoneInfo.offset
+        ),
         trigger_window_minutes: parseInt(formData.trigger_window_minutes, 10),
         extension_minutes: parseInt(formData.extension_minutes, 10),
         extension_trigger: formData.extension_trigger,
@@ -242,58 +230,64 @@ export default function CreateRfqForm() {
 
       const res = await fetch("/api/rfqs", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       const json = await res.json();
 
       if (!res.ok || json.error) {
-        if (res.status === 409 || json.error?.status === 409) {
-          const duplicateMsg = `An RFQ with reference ID "${payload.reference_id}" already exists. Please choose a unique reference ID.`;
-          setFormError(duplicateMsg);
-          setFieldErrors((prev) => ({ ...prev, reference_id: duplicateMsg }));
-          const refEl = document.getElementById("reference_id");
-          if (refEl) refEl.focus();
-        } else if (res.status === 422 || json.error?.status === 422) {
-          setFormError(json.error?.message || "Validation failed on the backend.");
+        if (res.status === 409) {
+          setFieldErrors((prev) => ({
+            ...prev,
+            reference_id: "An RFQ with this Reference ID already exists in the system.",
+          }));
+          setFormError("Reference ID conflict: An RFQ with this reference ID already exists.");
+        } else if (res.status === 422) {
+          setFormError(
+            json.error?.message ||
+              "Backend validation rejected this payload. Please review date chronological order."
+          );
         } else {
-          setFormError(json.error?.message || `Failed to create RFQ (HTTP ${res.status}).`);
+          setFormError(
+            json.error?.message ||
+              `Failed to create RFQ (HTTP ${res.status}). Please check backend status.`
+          );
         }
-        setIsSubmitting(false);
+        window.scrollTo({ top: 0, behavior: "smooth" });
         return;
       }
 
-      // Success Confirmation (HTTP 201)
       setSuccessMessage(
-        `RFQ "${json.data?.reference_id || payload.reference_id}" created successfully! Redirecting to RFQ management...`
+        `RFQ "${json.data?.name || payload.name}" created successfully! Redirecting to live auction workspace...`
       );
 
-      // Force Next.js router cache invalidation so the new RFQ immediately shows in /rfqs
-      router.refresh();
-
-      // Brief delay for the user to perceive the success banner before transition
       setTimeout(() => {
-        router.push("/rfqs");
-      }, 750);
+        if (json.data?.id) {
+          router.push(`/rfqs/${json.data.id}`);
+        } else {
+          router.push("/rfqs");
+        }
+      }, 1200);
     } catch (err) {
-      setFormError(err.message || "An unexpected network error occurred while submitting.");
+      setFormError(
+        err.message || "Network error: Failed to connect to internal RFQ proxy."
+      );
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-8">
-      {/* Top Notification Alerts */}
+    <form onSubmit={handleSubmit} noValidate className="space-y-6">
+      {/* Top Banner Alert: Form-level Error */}
       {formError && (
         <div
           role="alert"
-          className="rounded-xl border border-rose-200 bg-rose-50/90 p-4 text-rose-900 shadow-xs flex items-start gap-3"
+          className="rounded-2xl border border-rose-200 bg-rose-50/90 p-4 text-rose-900 shadow-xs flex items-start gap-3"
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-700">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-700">
             <svg
               className="h-5 w-5"
               viewBox="0 0 24 24"
@@ -319,9 +313,9 @@ export default function CreateRfqForm() {
       {successMessage && (
         <div
           role="status"
-          className="rounded-xl border border-emerald-200 bg-emerald-50/90 p-4 text-emerald-900 shadow-xs flex items-start gap-3"
+          className="rounded-2xl border border-emerald-200 bg-emerald-50/90 p-4 text-emerald-900 shadow-xs flex items-start gap-3"
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
             <CheckCircleIcon className="h-5 w-5" />
           </div>
           <div className="flex-1">
@@ -334,22 +328,22 @@ export default function CreateRfqForm() {
       {/* =========================================================================
           SECTION A: RFQ Information
           ========================================================================= */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
-            <RfqIcon className="h-5 w-5" />
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs space-y-5">
+        <div className="flex items-center gap-3 border-b border-slate-100 pb-3.5">
+          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-blue-50 text-blue-700 border border-blue-100/80">
+            <RfqIcon className="h-4.5 w-4.5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900">
+            <h2 className="text-sm font-bold text-slate-900 tracking-tight">
               Section A: RFQ Identification
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-[11px] text-slate-400">
               Unique reference code and descriptive tender name
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Reference ID */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
@@ -371,10 +365,10 @@ export default function CreateRfqForm() {
               value={formData.reference_id}
               onChange={(e) => handleChange("reference_id", e.target.value)}
               placeholder="e.g., RFQ-2026-MUM-PUN-01"
-              className={`w-full rounded-lg border bg-white px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 font-mono focus:outline-none transition-colors ${
+              className={`w-full rounded-xl border bg-slate-50/40 px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 font-mono focus:bg-white focus:outline-none transition-all ${
                 fieldErrors.reference_id
-                  ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-1 focus:ring-rose-600"
-                  : "border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-2 focus:ring-rose-600/20"
+                  : "border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
               }`}
             />
             {fieldErrors.reference_id ? (
@@ -409,10 +403,10 @@ export default function CreateRfqForm() {
               value={formData.name}
               onChange={(e) => handleChange("name", e.target.value)}
               placeholder="e.g., Mumbai to Pune FTL Dry Van Freight Auction"
-              className={`w-full rounded-lg border bg-white px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none transition-colors ${
+              className={`w-full rounded-xl border bg-slate-50/40 px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none transition-all ${
                 fieldErrors.name
-                  ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-1 focus:ring-rose-600"
-                  : "border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-2 focus:ring-rose-600/20"
+                  : "border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
               }`}
             />
             {fieldErrors.name ? (
@@ -431,38 +425,38 @@ export default function CreateRfqForm() {
       {/* =========================================================================
           SECTION B: Auction Schedule
           ========================================================================= */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4 gap-2">
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-3.5 gap-2">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
-              <ClockIcon className="h-5 w-5" />
+            <div className="flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-blue-50 text-blue-700 border border-blue-100/80">
+              <ClockIcon className="h-4.5 w-4.5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">
+              <h2 className="text-sm font-bold text-slate-900 tracking-tight">
                 Section B: Auction Schedule &amp; Milestones
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-[11px] text-slate-400">
                 Bidding commencement, preliminary closing time, hard deadline, and cargo pickup
               </p>
             </div>
           </div>
 
           {/* Explicit User Timezone Badge */}
-          <div className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-900 shrink-0">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-200/80 bg-blue-50 px-3 py-0.8 text-[11px] font-medium text-blue-900 shrink-0">
             <span className="font-semibold text-blue-950">Local Timezone:</span>
             <span>{timezoneInfo.formatted}</span>
           </div>
         </div>
 
         {/* Timezone Transparency Callout */}
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 flex items-start gap-2.5">
+        <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 text-xs text-slate-600 flex items-start gap-2.5">
           <InfoIcon className="h-4 w-4 text-blue-700 shrink-0 mt-0.5" />
           <p className="text-[11px] leading-relaxed">
             Inputs are captured in your local timezone and converted to standard timezone-aware ISO 8601 strings (<code className="font-mono text-slate-800">{timezoneInfo.offset}</code>) before transmission. Rule: <span className="font-semibold text-slate-800">Bid Start &lt; Initial Close &lt; Forced Close</span> and <span className="font-semibold text-slate-800">Pickup &gt; Bid Start</span>.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Bid Start Date & Time */}
           <div className="space-y-1.5">
             <label
@@ -477,10 +471,10 @@ export default function CreateRfqForm() {
               name="bid_start_at"
               value={formData.bid_start_at}
               onChange={(e) => handleChange("bid_start_at", e.target.value)}
-              className={`w-full rounded-lg border bg-white px-3 py-2 text-xs text-slate-900 focus:outline-none transition-colors ${
+              className={`w-full rounded-xl border bg-slate-50/40 px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none transition-all ${
                 fieldErrors.bid_start_at
-                  ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-1 focus:ring-rose-600"
-                  : "border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-2 focus:ring-rose-600/20"
+                  : "border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
               }`}
             />
             {fieldErrors.bid_start_at ? (
@@ -508,10 +502,10 @@ export default function CreateRfqForm() {
               name="initial_close_at"
               value={formData.initial_close_at}
               onChange={(e) => handleChange("initial_close_at", e.target.value)}
-              className={`w-full rounded-lg border bg-white px-3 py-2 text-xs text-slate-900 focus:outline-none transition-colors ${
+              className={`w-full rounded-xl border bg-slate-50/40 px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none transition-all ${
                 fieldErrors.initial_close_at
-                  ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-1 focus:ring-rose-600"
-                  : "border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-2 focus:ring-rose-600/20"
+                  : "border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
               }`}
             />
             {fieldErrors.initial_close_at ? (
@@ -539,10 +533,10 @@ export default function CreateRfqForm() {
               name="forced_close_at"
               value={formData.forced_close_at}
               onChange={(e) => handleChange("forced_close_at", e.target.value)}
-              className={`w-full rounded-lg border bg-white px-3 py-2 text-xs text-slate-900 focus:outline-none transition-colors ${
+              className={`w-full rounded-xl border bg-slate-50/40 px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none transition-all ${
                 fieldErrors.forced_close_at
-                  ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-1 focus:ring-rose-600"
-                  : "border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-2 focus:ring-rose-600/20"
+                  : "border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
               }`}
             />
             {fieldErrors.forced_close_at ? (
@@ -570,10 +564,10 @@ export default function CreateRfqForm() {
               name="pickup_at"
               value={formData.pickup_at}
               onChange={(e) => handleChange("pickup_at", e.target.value)}
-              className={`w-full rounded-lg border bg-white px-3 py-2 text-xs text-slate-900 focus:outline-none transition-colors ${
+              className={`w-full rounded-xl border bg-slate-50/40 px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none transition-all ${
                 fieldErrors.pickup_at
-                  ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-1 focus:ring-rose-600"
-                  : "border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-2 focus:ring-rose-600/20"
+                  : "border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
               }`}
             />
             {fieldErrors.pickup_at ? (
@@ -592,24 +586,24 @@ export default function CreateRfqForm() {
       {/* =========================================================================
           SECTION C: Auction Extension Rules
           ========================================================================= */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
-            <ShieldCheckIcon className="h-5 w-5" />
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs space-y-5">
+        <div className="flex items-center gap-3 border-b border-slate-100 pb-3.5">
+          <div className="flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-blue-50 text-blue-700 border border-blue-100/80">
+            <ShieldCheckIcon className="h-4.5 w-4.5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900">
+            <h2 className="text-sm font-bold text-slate-900 tracking-tight">
               Section C: British Auction Dynamic Extension Rules
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-[11px] text-slate-400">
               Configure trigger window, extension increment, and qualifying event criteria
             </p>
           </div>
         </div>
 
         {/* Mechanism Explanation Card */}
-        <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-4 text-xs text-blue-900 space-y-1.5">
-          <p className="font-semibold text-blue-950 flex items-center gap-1.5">
+        <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3.5 text-xs text-blue-900 space-y-1">
+          <p className="font-semibold text-blue-950 flex items-center gap-1.5 text-xs">
             <InfoIcon className="h-4 w-4 text-blue-700" />
             How British Reverse Auction Extension Works
           </p>
@@ -618,7 +612,7 @@ export default function CreateRfqForm() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* Trigger Window (X) */}
           <div className="space-y-1.5">
             <label
@@ -637,13 +631,13 @@ export default function CreateRfqForm() {
                 value={formData.trigger_window_minutes}
                 onChange={(e) => handleChange("trigger_window_minutes", e.target.value)}
                 placeholder="5"
-                className={`w-full rounded-lg border bg-white px-3 py-2 pr-16 text-xs text-slate-900 focus:outline-none transition-colors ${
+                className={`w-full rounded-xl border bg-slate-50/40 px-3.5 py-2 pr-16 text-xs text-slate-900 focus:bg-white focus:outline-none transition-all ${
                   fieldErrors.trigger_window_minutes
-                    ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-1 focus:ring-rose-600"
-                    : "border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                    ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-2 focus:ring-rose-600/20"
+                    : "border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
                 }`}
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-medium text-slate-400 pointer-events-none">
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-medium text-slate-400 pointer-events-none">
                 minutes
               </span>
             </div>
@@ -676,13 +670,13 @@ export default function CreateRfqForm() {
                 value={formData.extension_minutes}
                 onChange={(e) => handleChange("extension_minutes", e.target.value)}
                 placeholder="3"
-                className={`w-full rounded-lg border bg-white px-3 py-2 pr-16 text-xs text-slate-900 focus:outline-none transition-colors ${
+                className={`w-full rounded-xl border bg-slate-50/40 px-3.5 py-2 pr-16 text-xs text-slate-900 focus:bg-white focus:outline-none transition-all ${
                   fieldErrors.extension_minutes
-                    ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-1 focus:ring-rose-600"
-                    : "border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                    ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-2 focus:ring-rose-600/20"
+                    : "border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
                 }`}
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-medium text-slate-400 pointer-events-none">
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-medium text-slate-400 pointer-events-none">
                 minutes
               </span>
             </div>
@@ -710,10 +704,10 @@ export default function CreateRfqForm() {
               name="extension_trigger"
               value={formData.extension_trigger}
               onChange={(e) => handleChange("extension_trigger", e.target.value)}
-              className={`w-full rounded-lg border bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:outline-none transition-colors ${
+              className={`w-full rounded-xl border bg-slate-50/40 px-3 py-2 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none transition-all ${
                 fieldErrors.extension_trigger
-                  ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-1 focus:ring-rose-600"
-                  : "border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  ? "border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-2 focus:ring-rose-600/20"
+                  : "border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
               }`}
             >
               {EXTENSION_TRIGGERS.map((t) => (
@@ -739,10 +733,10 @@ export default function CreateRfqForm() {
       </div>
 
       {/* Form Actions Footer */}
-      <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+      <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
         <Link
           href="/rfqs"
-          className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+          className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
         >
           Cancel &amp; Return to RFQs
         </Link>
@@ -751,7 +745,7 @@ export default function CreateRfqForm() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-blue-700 px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-xs hover:bg-blue-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-blue-700 px-6 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-blue-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
               <>

@@ -47,7 +47,7 @@ export default async function RfqDetailPage({ params }) {
         </p>
         <Link
           href="/rfqs"
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors"
+          className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-blue-700 rounded-full hover:bg-blue-800 transition-colors shadow-xs"
         >
           <ArrowLeftIcon className="w-4 h-4" />
           <span>Return to RFQ Listings</span>
@@ -81,7 +81,7 @@ export default async function RfqDetailPage({ params }) {
         </p>
         <Link
           href="/rfqs"
-          className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors"
+          className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-blue-700 rounded-full hover:bg-blue-800 transition-colors shadow-xs"
         >
           <ArrowLeftIcon className="w-4 h-4" />
           <span>Return to All RFQs</span>
@@ -106,14 +106,14 @@ export default async function RfqDetailPage({ params }) {
         <div className="flex items-center justify-center gap-3">
           <Link
             href="/rfqs"
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-full hover:bg-slate-50 transition-colors shadow-xs"
           >
             <ArrowLeftIcon className="w-4 h-4" />
             <span>Back to RFQs</span>
           </Link>
           <a
             href={`/rfqs/${numId}`}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-blue-700 rounded-full hover:bg-blue-800 transition-colors shadow-xs"
           >
             <span>Retry</span>
           </a>
@@ -123,7 +123,7 @@ export default async function RfqDetailPage({ params }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="w-full">
       <RfqWorkspaceClient
         initialRfq={rfqRes.data}
         initialRankings={rankRes.data || []}

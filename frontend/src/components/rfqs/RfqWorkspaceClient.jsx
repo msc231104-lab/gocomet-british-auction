@@ -335,7 +335,7 @@ export default function RfqWorkspaceClient({
       />
 
       {/* Navigation Tabs */}
-      <div className="border-b border-slate-200">
+      <div className="border-b border-slate-200/80">
         <nav
           className="-mb-px flex space-x-2 sm:space-x-6 overflow-x-auto pb-1"
           aria-label="Workspace Sections"
@@ -345,16 +345,16 @@ export default function RfqWorkspaceClient({
             onClick={() => setActiveTab("workspace")}
             className={`inline-flex items-center gap-2 py-3 px-3 border-b-2 text-xs font-semibold whitespace-nowrap transition-colors ${
               activeTab === "workspace"
-                ? "border-slate-900 text-slate-900"
-                : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                ? "border-blue-700 text-blue-700"
+                : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
             }`}
           >
             <TrophyIcon className="w-4 h-4" />
             <span>Live Leaderboard & Bidding</span>
             <span
-              className={`ml-1 text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
+              className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-bold ${
                 activeTab === "workspace"
-                  ? "bg-slate-900 text-white"
+                  ? "bg-blue-700 text-white"
                   : "bg-slate-100 text-slate-600"
               }`}
             >
@@ -367,16 +367,16 @@ export default function RfqWorkspaceClient({
             onClick={() => setActiveTab("bids")}
             className={`inline-flex items-center gap-2 py-3 px-3 border-b-2 text-xs font-semibold whitespace-nowrap transition-colors ${
               activeTab === "bids"
-                ? "border-slate-900 text-slate-900"
-                : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                ? "border-blue-700 text-blue-700"
+                : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
             }`}
           >
             <HistoryIcon className="w-4 h-4" />
             <span>Bid Audit Log</span>
             <span
-              className={`ml-1 text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
+              className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-bold ${
                 activeTab === "bids"
-                  ? "bg-slate-900 text-white"
+                  ? "bg-blue-700 text-white"
                   : "bg-slate-100 text-slate-600"
               }`}
             >
@@ -389,16 +389,16 @@ export default function RfqWorkspaceClient({
             onClick={() => setActiveTab("activity")}
             className={`inline-flex items-center gap-2 py-3 px-3 border-b-2 text-xs font-semibold whitespace-nowrap transition-colors ${
               activeTab === "activity"
-                ? "border-slate-900 text-slate-900"
-                : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                ? "border-blue-700 text-blue-700"
+                : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
             }`}
           >
             <ClockIcon className="w-4 h-4" />
             <span>Activity Timeline</span>
             <span
-              className={`ml-1 text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
+              className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-bold ${
                 activeTab === "activity"
-                  ? "bg-slate-900 text-white"
+                  ? "bg-blue-700 text-white"
                   : "bg-slate-100 text-slate-600"
               }`}
             >
@@ -411,8 +411,8 @@ export default function RfqWorkspaceClient({
             onClick={() => setActiveTab("specs")}
             className={`inline-flex items-center gap-2 py-3 px-3 border-b-2 text-xs font-semibold whitespace-nowrap transition-colors ${
               activeTab === "specs"
-                ? "border-slate-900 text-slate-900"
-                : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                ? "border-blue-700 text-blue-700"
+                : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
             }`}
           >
             <InfoIcon className="w-4 h-4" />
@@ -460,7 +460,7 @@ export default function RfqWorkspaceClient({
 
       {/* Tab 4: Auction Specifications */}
       {activeTab === "specs" && (
-        <div className="bg-white rounded-xl border border-slate-200/80 p-6 shadow-xs space-y-6">
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs space-y-6">
           <div>
             <h3 className="text-base font-semibold text-slate-900 mb-1">
               Auction Parameters & Specifications
@@ -472,7 +472,7 @@ export default function RfqWorkspaceClient({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* General Specs */}
-            <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/50 space-y-3">
+            <div className="border border-slate-200/80 rounded-xl p-4 bg-slate-50/50 space-y-3">
               <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                 RFQ Identity & Status
               </h4>

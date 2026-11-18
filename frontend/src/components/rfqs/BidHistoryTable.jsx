@@ -22,7 +22,7 @@ export default function BidHistoryTable({ bids = [] }) {
 
   if (!bids || bids.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-slate-200/80 p-10 text-center shadow-xs">
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-10 text-center shadow-xs">
         <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
           <HistoryIcon className="w-6 h-6" />
         </div>
@@ -38,14 +38,14 @@ export default function BidHistoryTable({ bids = [] }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
       {/* Header with Search */}
       <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-slate-900">
             Bid Audit Trail
           </h3>
-          <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+          <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full">
             {bids.length} {bids.length === 1 ? "entry" : "entries"}
           </span>
         </div>
@@ -60,7 +60,7 @@ export default function BidHistoryTable({ bids = [] }) {
               placeholder="Search by supplier or bid #..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent placeholder-slate-400"
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 placeholder-slate-400 transition-colors"
             />
           </div>
         )}

@@ -15,7 +15,7 @@ import { formatDateTimeUTC } from "@/lib/formatters";
 export default function AuctionTimeline({ activities = [] }) {
   if (!activities || activities.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-slate-200/80 p-10 text-center shadow-xs">
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-10 text-center shadow-xs">
         <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
           <ClockIcon className="w-6 h-6" />
         </div>
@@ -30,19 +30,14 @@ export default function AuctionTimeline({ activities = [] }) {
     );
   }
 
-  // Display newest activities first, or chronological.
-  // Standard activity logs often show newest at top or chronological.
-  // Let's sort newest first for easy tracking, or maintain backend order.
-  // In FastAPI rfq_service: `SELECT * FROM auction_activities WHERE rfq_id = :rfq_id ORDER BY created_at ASC`
-  // Displaying chronological top-to-bottom with a timeline line is intuitive.
   return (
-    <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs p-6">
-      <div className="flex items-center justify-between pb-5 border-b border-slate-100 mb-6">
+    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 sm:p-6">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-slate-900">
             Auction Event Timeline
           </h3>
-          <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+          <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full">
             {activities.length} {activities.length === 1 ? "event" : "events"}
           </span>
         </div>
@@ -92,7 +87,7 @@ export default function AuctionTimeline({ activities = [] }) {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${badgeColor}`}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badgeColor}`}
                     >
                       {eventTitle}
                     </span>
